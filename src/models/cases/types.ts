@@ -1,12 +1,9 @@
+// Тип для кейса (имя; id; список загруженных файлов к этому кейсу; имя объединенного файла пдф, если есть)
 type Case = {
 	title: string;
 	id: string;
-	uploadedFiles: number;
-	filelist?: string[];
+	filesList: string[];
+	merged?: string;
 };
 
-type NewCase = {
-	title: string;
-};
-
-export { Case, NewCase };
+export { Case };
