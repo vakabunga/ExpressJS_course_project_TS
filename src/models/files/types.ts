@@ -1,3 +1,5 @@
+import { Case } from "../cases/types";
+
 type Message = {
 	type: 'warning' | 'error';
 	message: string;
@@ -11,10 +13,16 @@ type DataForHTMLConvert = {
 	messages: Message[];
 };
 
-type FunctionResult = {
+type ResultWithFile = {
 	status: number;
 	message: string;
 	data?: Buffer<ArrayBufferLike> | Uint8Array<ArrayBufferLike>;
 };
 
-export { DataForHTMLConvert, FunctionResult };
+type ResultWithCase = {
+	status: number;
+	message: string;
+	data?: Case;
+}
+
+export { DataForHTMLConvert, ResultWithFile, ResultWithCase };

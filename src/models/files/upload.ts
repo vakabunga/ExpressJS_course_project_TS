@@ -1,14 +1,17 @@
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { PutObjectCommand, PutObjectCommandOutput } from '@aws-sdk/client-s3';
 import { FileArray, UploadedFile } from 'express-fileupload';
 
 import { convertToPdf } from './convertToPdf';
-
-import { FunctionResult } from './types';
 import { s3Client } from '../../server';
-import { BUCKET } from '../../config/config';
+import { BUCKET, CASE_DB_PATH } from '../../config/config';
 
-async function uploadFile(caseId: string, data: FileArray): Promise<FunctionResult> {
+import { ResultWithCase, ResultWithFile } from './types';
+import { addFilesToCase } from './addFilesToCase';
+
+async function uploadFile(caseId: string, data: FileArray): Promise<ResultWithCase> {
+	// Проверка на загрузку одного файла
 	if (Array.isArray(data.file)) {
 		return {
 			status: 400,
@@ -16,35 +19,55 @@ async function uploadFile(caseId: string, data: FileArray): Promise<FunctionResu
 		};
 	}
 
+	const casePath = path.join(process.cwd(), CASE_DB_PATH, `${caseId}.json`);
+	const caseData = JSON.parse(await readFile(casePath, 'utf-8'));
+
 	const uploadedFile: UploadedFile = data.file;
-	const fileName = uploadedFile.md5;
+	const filename = uploadedFile.md5;
 	const fileExtension = path.extname(uploadedFile.name);
-	const fileNameFull = fileName + fileExtension;
+	const filenameFull = filename + fileExtension;
 
-	const uploadDocResult = await uploadYC(fileNameFull, uploadedFile.data);
+	const uploadDocResult = await uploadYC(filenameFull, uploadedFile.data);
 
-  if (uploadDocResult.$metadata.httpStatusCode != 200) {
-    return { status: 400, message: 'Document was not uploaded' }
-  }
+	if (uploadDocResult.$metadata.httpStatusCode != 200) {
+		return {
+			status: 400,
+			message: 'Document was not uploaded'};
+	}
 
-	const convertResult = await convertToPdf(caseId, fileName, uploadedFile.data);
+	// конвертируем загруженный файл в pdf
+	const convertResult = await convertToPdf(caseId, filename, uploadedFile.data);
 
-  if (!convertResult.data) {
-    return { status: 400, message: 'Pdf was not created'}; // добавить возможность конвертации файла, уже загруженного в хранилище
-  }
+	// добавить возможность конвертации файла, уже загруженного в хранилище
+	if (!convertResult.data) {
+		return {
+			status: 400,
+			message: 'Pdf was not created'
+		}; 
+	}
 
-  const uploadPdfResult = await uploadYC(`${fileName}.pdf`, convertResult.data);
+	// загружаем pdf в хранилище
+	const uploadPdfResult = await uploadYC(`${filename}.pdf`, convertResult.data);
+
+	// проверка статуса загрузки
+	const status = uploadPdfResult.$metadata.httpStatusCode === 200 ? 200 : 400
+
+	// добавляем данные о загруженном файле в case
+	if (status === 200) {
+		addFilesToCase(caseId, `${filename}.pdf`);
+	}
 
 	return {
-    status: uploadPdfResult.$metadata.httpStatusCode === 200 ? 200 : 400,
-    message: uploadPdfResult.$metadata.httpStatusCode === 200 ? 'Document and pdf was uploaded successfully' : 'PDF was not uploaded'
-  }
+		status: status,
+		message: uploadPdfResult.$metadata.httpStatusCode === 200 ? 'Document and pdf was uploaded successfully'	: 'PDF was not uploaded',
+		data: caseData,
+	};
 }
 
-async function uploadYC(fileNameFull: string, file: Buffer<ArrayBufferLike> | Uint8Array<ArrayBufferLike>): Promise<PutObjectCommandOutput> {
+async function uploadYC(filenameFull: string, file: ResultWithFile['data']): Promise<PutObjectCommandOutput> {
 	const command = new PutObjectCommand({
 		Bucket: BUCKET,
-		Key: fileNameFull,
+		Key: filenameFull,
 		Body: file,
 	});
 
