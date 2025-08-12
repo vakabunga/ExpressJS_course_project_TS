@@ -17,6 +17,7 @@
     "express": "5.1.0",
     "express-fileupload": "1.5.2",
     "mammoth": "1.10.0",
+    "pdf-merger-js": "5.1.2",
     "puppeteer": "24.15.0",
     "uuid": "11.1.0"
   },
