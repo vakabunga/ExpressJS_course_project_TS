@@ -76,7 +76,19 @@ app.get('/files/download/:filename', async (req: Request<unknown, unknown, unkno
 
 app.get('/files/download/all/:id', async (req: Request<unknown, unknown, unknown, { id: string }>, res: Response) => {
 	const caseId: string = req.query.id;
-	const mergedFile = await mergeFiles(caseId);
+	const mergedFile: GetObjectCommandOutput = await mergeFiles(caseId);
+
+	res.setHeader('Content-Disposition', `attachment; filename="mergedFiles.pdf"`);
+	res.setHeader('Content-Type', mergedFile.ContentType ?? 'application/octet-stream');
+	
+	if (mergedFile.ContentLength) {
+		res.setHeader("Content-Length", mergedFile.ContentLength.toString());
+	}
+
+	res.setHeader('Accept-Ranges', 'bytes');
+
+	(mergedFile.Body as NodeJS.ReadableStream)
+		.pipe(res);
 });
 
 export { app };
