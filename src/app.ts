@@ -24,7 +24,7 @@ app.get('/case/list', async (req, res) => {
 	res.send(casesList);
 });
 
-app.post('/case/create', async (req: Request<unknown, unknown, string>, res) => {
+app.post('/case/create', async (req: Request<unknown, unknown, { title: string }>, res) => {
 	const caseData = await createCase(req.body);
 
 	res.send({ success: true, ...caseData });
@@ -32,6 +32,7 @@ app.post('/case/create', async (req: Request<unknown, unknown, string>, res) => 
 
 app.use('/files/upload/:id', fileUpload());
 app.post('/files/upload/:id', async (req: Request<{ id: string }, unknown, UploadedFile>, res) => {
+	
 	if (!req.files) {
 		res.sendStatus(400);
 		res.send('Files are not uploaded');
@@ -42,20 +43,11 @@ app.post('/files/upload/:id', async (req: Request<{ id: string }, unknown, Uploa
 
 	const response = await uploadFile(caseId, req.files);
 
-	if (response.data === undefined) {
-		res.sendStatus(400);
-		res.send({ success: false, message: 'failed to upload' });
-		return;
-	}
-
-	const filesList = response.data.filesList;
-	const editCaseResult = await addFilesToCase(caseId, filesList[filesList.length - 1]);
-
-	res.send(editCaseResult);
+	res.send(response);
 });
 
-app.get('/files/download/:filename', async (req: Request<unknown, unknown, unknown, { filename: string }>, res: Response) => {
-	const filename: string = req.query.filename;
+app.get('/files/download/:filename', async (req: Request<{ filename: string }, unknown, unknown, unknown>, res: Response) => {
+	const filename: string = req.params.filename;
 
 	const s3Response: GetObjectCommandOutput = await downloadFile(filename);
 
@@ -74,8 +66,9 @@ app.get('/files/download/:filename', async (req: Request<unknown, unknown, unkno
 		.pipe(res);
 });
 
-app.get('/files/download/all/:id', async (req: Request<unknown, unknown, unknown, { id: string }>, res: Response) => {
-	const caseId: string = req.query.id;
+app.get('/files/download/all/:id', async (req: Request<{ id: string }, unknown, unknown, unknown>, res: Response) => {
+	const caseId: string = req.params.id;
+	console.log(caseId)
 	const mergedFile: GetObjectCommandOutput = await mergeFiles(caseId);
 
 	res.setHeader('Content-Disposition', `attachment; filename="mergedFiles.pdf"`);

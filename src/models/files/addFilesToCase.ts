@@ -11,7 +11,7 @@ async function addFilesToCase(caseId: string, filename: string): Promise<ResultW
 	const filePath = path.join(process.cwd(), CASE_DB_PATH, `${caseId}.json`);
 	const caseJson: Case = JSON.parse(await readFile(filePath, 'utf-8'));
 
-	caseJson.filesList.push(`${filename}.pdf`); // Добавить проверку исключающую повторную загрузку файлов на сервер
+	caseJson.filesList.push(filename); // Добавить проверку исключающую повторную загрузку файлов на сервер
 
 	await writeFile(filePath, JSON.stringify(caseJson, null, 4), 'utf-8');
 
