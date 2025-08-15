@@ -52,15 +52,12 @@ async function uploadFile(caseId: string, data: FileArray): Promise<ResultWithCa
 	// проверка статуса загрузки
 	const status = uploadPdfResult.$metadata.httpStatusCode === 200 ? 200 : 400
 
-	// добавляем данные о загруженном файле в case
-	if (status === 200) {
-		addFilesToCase(caseId, `${filename}.pdf`);
-	}
-
 	return {
 		status: status,
 		message: uploadPdfResult.$metadata.httpStatusCode === 200 ? 'Document and pdf was uploaded successfully'	: 'PDF was not uploaded',
-		data: caseData,
+
+		// добавляем данные о загруженном файле в case
+		data: status === 200 ? (await addFilesToCase(caseId, `${filename}.pdf`)).data : undefined, 
 	};
 }
 

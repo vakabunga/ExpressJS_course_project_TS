@@ -5,14 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { Case } from './types';
 import { CASE_DB_PATH, INDEX_JSON } from '../../config/config';
 
-async function createCase(title: string): Promise<Case> {
+async function createCase(data: { title: string }): Promise<Case> {
 	const caseData: Case = {
-		title: title,
+		...data,
 		id: uuidv4(),
 		filesList: [],
 	};
-	
-	// путь к новому json-файлу 
+
+	// путь к новому json-файлу
 	const caseFilePath = path.join(process.cwd(), CASE_DB_PATH, `${caseData.id}.json`); // Добавить проверку дубликатов имен
 
 	await writeFile(caseFilePath, JSON.stringify(caseData, null, 4), 'utf-8');
@@ -22,7 +22,7 @@ async function createCase(title: string): Promise<Case> {
 
 	// Если база данных пустая, создается новый пустой индексный файл
 	try {
-		await readFile(indexJsonPath, 'utf-8')
+		await readFile(indexJsonPath, 'utf-8');
 	} catch {
 		await writeFile(indexJsonPath, '', 'utf-8');
 	}
